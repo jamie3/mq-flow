@@ -23,13 +23,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ node, onClose, onExplore }: SidebarProps) {
-  if (!node) {
-    return (
-      <aside className="flex w-80 shrink-0 flex-col border-l border-slate-200 bg-white p-4 text-sm text-slate-500">
-        Select a node to view its details.
-      </aside>
-    )
-  }
+  // Hide the panel entirely when nothing is selected.
+  if (!node) return null
 
   const { data } = node
   const Icon = KIND_ICONS[data.kind as keyof typeof KIND_ICONS] ?? QueueIcon
