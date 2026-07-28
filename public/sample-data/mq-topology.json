@@ -1,0 +1,111 @@
+{
+  "queueManagers": [
+    { "name": "QM1", "description": "Primary order-processing queue manager" },
+    { "name": "QM2", "description": "Downstream fulfillment queue manager" }
+  ],
+  "queues": [
+    {
+      "name": "ORDERS.IN",
+      "queueManager": "QM1",
+      "queueType": "local",
+      "description": "Inbound order requests",
+      "maxDepth": 5000,
+      "currentDepth": 12
+    },
+    {
+      "name": "ORDERS.ALIAS",
+      "queueManager": "QM1",
+      "queueType": "alias",
+      "description": "Public-facing alias for order intake",
+      "targetQueue": "ORDERS.IN"
+    },
+    {
+      "name": "ORDERS.OUT",
+      "queueManager": "QM1",
+      "queueType": "local",
+      "description": "Outbound processed orders",
+      "maxDepth": 5000,
+      "currentDepth": 3
+    },
+    {
+      "name": "ORDERS.REMOTE",
+      "queueManager": "QM1",
+      "queueType": "remote",
+      "description": "Forwards orders to fulfillment",
+      "targetQueue": "FULFILLMENT.IN",
+      "targetQueueManager": "QM2"
+    },
+    {
+      "name": "FULFILLMENT.IN",
+      "queueManager": "QM2",
+      "queueType": "local",
+      "description": "Fulfillment intake queue",
+      "maxDepth": 5000,
+      "currentDepth": 7
+    },
+    {
+      "name": "DEAD.LETTER.QUEUE",
+      "queueManager": "QM1",
+      "queueType": "local",
+      "description": "Undeliverable message queue",
+      "maxDepth": 5000,
+      "currentDepth": 0
+    },
+    {
+      "name": "AUDIT.SUB.QUEUE",
+      "queueManager": "QM1",
+      "queueType": "local",
+      "description": "Destination for the audit subscription",
+      "maxDepth": 10000,
+      "currentDepth": 45
+    }
+  ],
+  "topics": [
+    {
+      "name": "ORDERS.TOPIC",
+      "queueManager": "QM1",
+      "topicString": "orders/#",
+      "description": "Root topic for all order events"
+    },
+    {
+      "name": "ORDERS.CREATED",
+      "queueManager": "QM1",
+      "topicString": "orders/created",
+      "parentTopic": "ORDERS.TOPIC",
+      "description": "Published when a new order is created"
+    },
+    {
+      "name": "ORDERS.SHIPPED",
+      "queueManager": "QM1",
+      "topicString": "orders/shipped",
+      "parentTopic": "ORDERS.TOPIC",
+      "description": "Published when an order ships"
+    }
+  ],
+  "subscriptions": [
+    {
+      "name": "AUDIT.SUB",
+      "queueManager": "QM1",
+      "subscriptionType": "durable",
+      "topicName": "ORDERS.TOPIC",
+      "destinationQueue": "AUDIT.SUB.QUEUE",
+      "description": "Audits every order event"
+    },
+    {
+      "name": "SHIPPING.NOTIFY.SUB",
+      "queueManager": "QM1",
+      "subscriptionType": "managed",
+      "topicName": "ORDERS.SHIPPED",
+      "description": "Triggers shipping notifications"
+    }
+  ],
+  "channels": [
+    {
+      "name": "QM1.TO.QM2",
+      "queueManager": "QM1",
+      "targetQueueManager": "QM2",
+      "channelType": "sender",
+      "description": "Sender channel to fulfillment"
+    }
+  ]
+}
