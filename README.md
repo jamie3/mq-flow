@@ -20,7 +20,7 @@ Built with **Vite + React + TypeScript**, styled with **Tailwind CSS**, laid out
 - **Filter the overview** — a search box filters the graph by name or **any field/property** (every
   whitespace-separated term must match), plus per-type toggles (queues / topics / subscriptions /
   channels) to tame large maps. The view re-fits to the matches, and a counter shows how many objects
-  are visible.
+  are visible. The filter (search text and toggles) is remembered across navigation and reloads.
 - **Side menu** listing each object category (Queue Managers, Queues, Topics, Subscriptions,
   Channels) with live counts.
 - **Searchable list pages** — click a category to browse its objects and filter them as you type.

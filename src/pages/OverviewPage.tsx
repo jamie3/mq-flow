@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FlowCanvas } from '../components/FlowCanvas'
 import { Legend } from '../components/Legend'
@@ -17,12 +17,43 @@ const KIND_SLUG: Record<MqNodeKind, string> = {
   subscription: 'subscription',
 }
 
+const ALL_KINDS: ObjectKind[] = ['queue', 'topic', 'subscription', 'channel']
+const FILTERS_KEY = 'mq-flow:overview-filters'
+
+interface PersistedFilters {
+  query: string
+  hidden: ObjectKind[]
+}
+
+function loadFilters(): PersistedFilters {
+  try {
+    const raw = localStorage.getItem(FILTERS_KEY)
+    if (!raw) return { query: '', hidden: [] }
+    const parsed = JSON.parse(raw) as Partial<PersistedFilters>
+    return {
+      query: typeof parsed.query === 'string' ? parsed.query : '',
+      hidden: Array.isArray(parsed.hidden) ? parsed.hidden.filter((k) => ALL_KINDS.includes(k)) : [],
+    }
+  } catch {
+    return { query: '', hidden: [] }
+  }
+}
+
 export function OverviewPage() {
   const { topology } = useTopology()
   const navigate = useNavigate()
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [query, setQuery] = useState('')
-  const [hidden, setHidden] = useState<Set<ObjectKind>>(new Set())
+  const [query, setQuery] = useState<string>(() => loadFilters().query)
+  const [hidden, setHidden] = useState<Set<ObjectKind>>(() => new Set(loadFilters().hidden))
+
+  // Persist the filter state so it survives navigation and reloads.
+  useEffect(() => {
+    try {
+      localStorage.setItem(FILTERS_KEY, JSON.stringify({ query, hidden: [...hidden] }))
+    } catch {
+      // Ignore storage failures; filtering still works in-memory.
+    }
+  }, [query, hidden])
 
   const toggleKind = (kind: ObjectKind) =>
     setHidden((prev) => {
