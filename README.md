@@ -26,14 +26,11 @@ Built with **Vite + React + TypeScript**, styled with **Tailwind CSS**, laid out
 
 ## Getting started
 
-Use **npm** or **pnpm** — both are supported.
+This project uses **[pnpm](https://pnpm.io/)** as its package manager (pinned via the
+`packageManager` field, so [Corepack](https://nodejs.org/api/corepack.html) will select the right
+version automatically — run `corepack enable` once if it isn't already).
 
 ```bash
-# npm
-npm install
-npm run dev
-
-# pnpm
 pnpm install
 pnpm dev
 ```
@@ -72,7 +69,7 @@ or from which fields are present. If your export uses different headers, extend 
 ## Building for static hosting
 
 ```bash
-npm run build      # or: pnpm build
+pnpm build
 ```
 
 The `dist/` folder is fully static and can be served from any file host (S3, GitHub Pages, nginx,
