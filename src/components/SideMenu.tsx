@@ -21,6 +21,17 @@ function ChannelIcon(props: React.SVGProps<SVGSVGElement>) {
   )
 }
 
+function TreeIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <rect x="4" y="3" width="7" height="5" rx="1" />
+      <rect x="13" y="10" width="7" height="5" rx="1" />
+      <rect x="13" y="17" width="7" height="4" rx="1" />
+      <path d="M7.5 8v9.5a1 1 0 0 0 1 1H13M7.5 12.5H13" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 const baseLink =
   'flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors'
 
@@ -47,6 +58,18 @@ export function SideMenu() {
         <span className="flex items-center gap-2">
           <ServerIcon className="h-4 w-4" />
           Overview
+        </span>
+      </NavLink>
+
+      <NavLink
+        to="/explore"
+        className={({ isActive }) =>
+          `${baseLink} ${isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-50'}`
+        }
+      >
+        <span className="flex items-center gap-2">
+          <TreeIcon className="h-4 w-4" />
+          Explore
         </span>
       </NavLink>
 

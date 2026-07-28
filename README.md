@@ -9,6 +9,14 @@ Built with **Vite + React + TypeScript**, styled with **Tailwind CSS**, laid out
 
 ## Features
 
+- **CSV import wizard** — “Load export…” walks you through naming a queue manager and picking one or
+  more MQ Explorer CSV exports. Each file's object type (queues, topics, subscriptions, channels) is
+  detected automatically from its column headers.
+- **Persists to local storage** — imported data is saved in the browser and reloaded on next visit.
+  Re-importing a queue manager of the same name prompts to replace it (its whole object tree is
+  rebuilt).
+- **Explore tree** — a collapsible tree of queue managers → object groups → objects → properties,
+  with a jump-to-flow link on every object.
 - **Side menu** listing each object category (Queue Managers, Queues, Topics, Subscriptions,
   Channels) with live counts.
 - **Searchable list pages** — click a category to browse its objects and filter them as you type.
@@ -24,10 +32,10 @@ Built with **Vite + React + TypeScript**, styled with **Tailwind CSS**, laid out
   - subscription → topic it subscribes to
   - subscription → destination queue it delivers to
   - sender channel → target queue manager
-- **Click any node** to inspect its attributes (type, topic string, max/current depth, description, …)
+- **Click any node** to inspect its attributes (type, topic string, current depth, description, …)
   in the side panel.
-- **Load your own export** at runtime (JSON or CSV) — nothing is uploaded anywhere; parsing happens
-  entirely in the browser.
+- **Everything stays in the browser** — CSV parsing and storage are entirely client-side; nothing is
+  uploaded anywhere.
 - **Auto-layout** via dagre, plus pan/zoom, a minimap, and fit-to-view.
 
 ## Pages & navigation
@@ -37,6 +45,7 @@ The app is a small single-page app with client-side routing:
 | Route | Page |
 | --- | --- |
 | `/` | Overview — the full topology graph |
+| `/explore` | Tree of queue managers, their objects, and properties |
 | `/list/:category` | Searchable list of objects in a category |
 | `/object/:kind/:queueManager/:name` | Focused relationship flow for a single object |
 
@@ -55,14 +64,44 @@ pnpm install
 pnpm dev
 ```
 
-Open the printed URL. The app loads bundled sample data on start; use **Load export…** to open your
-own MQ Explorer export.
+Open the printed URL. If you've imported before, your saved topology loads automatically; otherwise a
+bundled sample is shown. Use **Load export…** to import your own MQ Explorer CSV files.
 
-## Data format
+## Importing MQ Explorer CSV files
 
-The canonical format is a single JSON file — see
+Click **Load export…** to open the import wizard:
+
+1. **Name the queue manager.** Everything you import in this session lands under this name.
+2. **Pick the CSV files.** Select one or more MQ Explorer exports (queues, topics, subscriptions,
+   channels — in any combination). Each file's object type is detected from its header row and shown
+   with a badge and row count.
+3. **Import.** The objects are built into a model, saved to your browser's local storage, and the app
+   jumps to the Explore tree. If a queue manager of the same name already exists, you're asked whether
+   to replace it — replacing removes its current objects and rebuilds the tree from the new files.
+
+Detection keys off the identifying column in each file's header row:
+
+| File contains | Detected as |
+| --- | --- |
+| a `Subscription name` column | Subscriptions |
+| a `Channel name` column | Channels |
+| a `Queue name` column | Queues |
+| a `Topic name` column | Topics |
+
+The exact MQ Explorer column names are mapped to the model in
+[`src/lib/importCsv.ts`](src/lib/importCsv.ts) (e.g. alias queues take their target from `Base object`,
+remote queues from `Remote queue` / `Remote queue manager`, subscriptions from `Destination name`).
+Every non-empty column is also kept verbatim as a property, visible on the Explore tree and the details
+panel. If your MQ Explorer version uses different headers, adjust the mapping there.
+
+Imported data lives entirely in your browser (local storage under the key `mq-flow:topology`) — nothing
+is uploaded. Clearing site data resets the app to the bundled sample.
+
+## JSON format
+
+The sample data and the in-memory model use a single JSON shape — see
 [`public/sample-data/mq-topology.json`](public/sample-data/mq-topology.json) for a complete example
-and [`src/types/mq.ts`](src/types/mq.ts) for the full schema. In short:
+and [`src/types/mq.ts`](src/types/mq.ts) for the full schema:
 
 ```jsonc
 {
@@ -77,14 +116,6 @@ and [`src/types/mq.ts`](src/types/mq.ts) for the full schema. In short:
   "channels": [{ "name": "QM1.TO.QM2", "queueManager": "QM1", "targetQueueManager": "QM2" }]
 }
 ```
-
-### CSV exports
-
-MQ Explorer's own CSV exports are also accepted. Column headers are matched case- and
-space-insensitively against a set of common aliases (`QMgr`, `RQMNAME`, `MAXDEPTH`, `TOPICSTR`, …),
-and the object kind (queue / topic / subscription / channel) is inferred from an explicit type column
-or from which fields are present. If your export uses different headers, extend `COLUMN_ALIASES` in
-[`src/lib/parseMqExport.ts`](src/lib/parseMqExport.ts).
 
 ## Building for static hosting
 
@@ -124,13 +155,15 @@ docker run --rm -p 8080:80 \
 ```
 public/sample-data/mq-topology.json   Sample export used on first load
 src/types/mq.ts                        Topology data model (queues/topics/subscriptions/…)
-src/lib/parseMqExport.ts               JSON + CSV parsing into the data model
+src/lib/importCsv.ts                   MQ Explorer CSV detection + column mapping
+src/lib/parseMqExport.ts               JSON parsing (sample data) into the data model
 src/lib/graphModel.ts                  Data model → normalized objects + relationships (shared)
 src/lib/buildFullGraph.ts              Grouped overview layout (dagre per queue manager)
 src/lib/buildFocusedGraph.ts           Neighbourhood layout for a single object's flow
 src/lib/categories.ts                  Object categories + route helpers
-src/state/TopologyContext.tsx          Shared loaded-topology state + file loading
+src/state/TopologyContext.tsx          Shared topology state, local-storage persistence, import
+src/components/ImportModal.tsx         CSV import wizard
 src/components/                        Layout, SideMenu, TopBar, FlowCanvas, Sidebar, nodes, …
-src/pages/                             OverviewPage, ListPage, ObjectFlowPage
+src/pages/                             OverviewPage, ExplorePage, ListPage, ObjectFlowPage
 src/App.tsx                            Router
 ```
