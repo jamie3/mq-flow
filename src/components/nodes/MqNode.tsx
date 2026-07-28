@@ -1,6 +1,6 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { QueueIcon, SubscriptionIcon, TopicIcon } from '../icons'
-import type { MqFlowNode } from '../../lib/buildGraph'
+import type { MqFlowNode } from '../../lib/graphModel'
 
 const KIND_STYLES: Record<string, { bg: string; border: string; text: string; icon: string }> = {
   queue: { bg: 'bg-sky-50', border: 'border-sky-400', text: 'text-sky-900', icon: 'text-sky-500' },
@@ -30,7 +30,8 @@ export function MqNode({ data, selected }: NodeProps<MqFlowNode>) {
         style.bg,
         style.border,
         data.virtual ? 'border-dashed opacity-70' : '',
-        selected ? 'ring-2 ring-indigo-500 ring-offset-1 shadow-md' : '',
+        data.isRoot ? 'ring-2 ring-indigo-600 ring-offset-2 shadow-md' : '',
+        selected && !data.isRoot ? 'ring-2 ring-indigo-500 ring-offset-1 shadow-md' : '',
       ].join(' ')}
     >
       <Handle type="target" position={Position.Top} className="!bg-slate-400" />

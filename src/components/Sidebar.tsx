@@ -1,5 +1,5 @@
 import { QueueIcon, ServerIcon, SubscriptionIcon, TopicIcon } from './icons'
-import type { MqFlowNode } from '../lib/buildGraph'
+import type { MqFlowNode } from '../lib/graphModel'
 
 const KIND_ICONS = {
   queueManager: ServerIcon,
@@ -18,9 +18,11 @@ const KIND_LABELS: Record<string, string> = {
 interface SidebarProps {
   node: MqFlowNode | null
   onClose: () => void
+  /** When provided, renders an "Explore relationships" button that navigates to the object's flow. */
+  onExplore?: () => void
 }
 
-export function Sidebar({ node, onClose }: SidebarProps) {
+export function Sidebar({ node, onClose, onExplore }: SidebarProps) {
   if (!node) {
     return (
       <aside className="flex w-80 shrink-0 flex-col border-l border-slate-200 bg-white p-4 text-sm text-slate-500">
@@ -56,6 +58,16 @@ export function Sidebar({ node, onClose }: SidebarProps) {
       </div>
 
       <div className="flex flex-col gap-4 p-4 text-sm">
+        {onExplore && (
+          <button
+            type="button"
+            onClick={onExplore}
+            className="flex items-center justify-center gap-1.5 rounded-md bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+          >
+            Explore relationships →
+          </button>
+        )}
+
         {data.virtual && (
           <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
             Referenced but not present as an object in the export — shown as inferred from a relationship.

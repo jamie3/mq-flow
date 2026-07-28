@@ -1,6 +1,6 @@
 import type { NodeProps } from '@xyflow/react'
 import { ServerIcon } from '../icons'
-import type { MqFlowNode } from '../../lib/buildGraph'
+import type { MqFlowNode } from '../../lib/graphModel'
 
 export function QmGroupNode({ data, selected }: NodeProps<MqFlowNode>) {
   return (

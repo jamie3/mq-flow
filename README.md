@@ -9,8 +9,14 @@ Built with **Vite + React + TypeScript**, styled with **Tailwind CSS**, laid out
 
 ## Features
 
-- **Queue managers as groups** — queues, topics, and subscriptions are nested inside their owning
-  queue manager.
+- **Side menu** listing each object category (Queue Managers, Queues, Topics, Subscriptions,
+  Channels) with live counts.
+- **Searchable list pages** — click a category to browse its objects and filter them as you type.
+- **Per-object relationship explorer** — click any object to open a focused flow centered on it.
+  Adjust how many relationship hops to show (depth 1–3), and click a neighbouring node to re-center
+  the flow on it and walk the graph.
+- **Overview page** — the whole topology at once, with queue managers as group containers holding
+  their queues, topics, and subscriptions.
 - **Relationship edges**, color-coded and labelled:
   - alias queue → base queue
   - remote queue → target queue on another queue manager
@@ -23,6 +29,20 @@ Built with **Vite + React + TypeScript**, styled with **Tailwind CSS**, laid out
 - **Load your own export** at runtime (JSON or CSV) — nothing is uploaded anywhere; parsing happens
   entirely in the browser.
 - **Auto-layout** via dagre, plus pan/zoom, a minimap, and fit-to-view.
+
+## Pages & navigation
+
+The app is a small single-page app with client-side routing:
+
+| Route | Page |
+| --- | --- |
+| `/` | Overview — the full topology graph |
+| `/list/:category` | Searchable list of objects in a category |
+| `/object/:kind/:queueManager/:name` | Focused relationship flow for a single object |
+
+> **Note for static hosting:** because these are real client-side routes, deep links need the host
+> to fall back to `index.html`. The bundled `nginx.conf` already does this (`try_files … /index.html`);
+> configure an equivalent rewrite if you serve `dist/` some other way.
 
 ## Getting started
 
@@ -105,6 +125,12 @@ docker run --rm -p 8080:80 \
 public/sample-data/mq-topology.json   Sample export used on first load
 src/types/mq.ts                        Topology data model (queues/topics/subscriptions/…)
 src/lib/parseMqExport.ts               JSON + CSV parsing into the data model
-src/lib/buildGraph.ts                  Data model → React Flow nodes/edges + dagre layout
-src/components/                        Toolbar, Sidebar, TopologyView, and custom nodes
+src/lib/graphModel.ts                  Data model → normalized objects + relationships (shared)
+src/lib/buildFullGraph.ts              Grouped overview layout (dagre per queue manager)
+src/lib/buildFocusedGraph.ts           Neighbourhood layout for a single object's flow
+src/lib/categories.ts                  Object categories + route helpers
+src/state/TopologyContext.tsx          Shared loaded-topology state + file loading
+src/components/                        Layout, SideMenu, TopBar, FlowCanvas, Sidebar, nodes, …
+src/pages/                             OverviewPage, ListPage, ObjectFlowPage
+src/App.tsx                            Router
 ```

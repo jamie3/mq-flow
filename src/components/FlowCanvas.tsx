@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import {
   Background,
   BackgroundVariant,
@@ -10,24 +10,26 @@ import {
 import '@xyflow/react/dist/style.css'
 import { MqNode } from './nodes/MqNode'
 import { QmGroupNode } from './nodes/QmGroupNode'
-import type { MqFlowEdge, MqFlowNode } from '../lib/buildGraph'
+import type { MqFlowEdge, MqFlowNode } from '../lib/graphModel'
 
-interface TopologyViewProps {
+interface FlowCanvasProps {
   nodes: MqFlowNode[]
   edges: MqFlowEdge[]
-  onNodeClick: (node: MqFlowNode) => void
-  onPaneClick: () => void
+  onNodeClick?: (node: MqFlowNode) => void
+  onPaneClick?: () => void
+  /** Overlay content (e.g. a legend) rendered on top of the canvas. */
+  children?: ReactNode
 }
 
-export function TopologyView({ nodes, edges, onNodeClick, onPaneClick }: TopologyViewProps) {
+export function FlowCanvas({ nodes, edges, onNodeClick, onPaneClick, children }: FlowCanvasProps) {
   const nodeTypes = useMemo(() => ({ mqNode: MqNode, qmGroup: QmGroupNode }), [])
 
   const handleNodeClick: NodeMouseHandler<MqFlowNode> = (_event, node) => {
-    onNodeClick(node)
+    onNodeClick?.(node)
   }
 
   return (
-    <div className="h-full w-full">
+    <div className="relative h-full w-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -48,6 +50,7 @@ export function TopologyView({ nodes, edges, onNodeClick, onPaneClick }: Topolog
           maskColor="rgba(241,245,249,0.7)"
         />
       </ReactFlow>
+      {children}
     </div>
   )
 }
