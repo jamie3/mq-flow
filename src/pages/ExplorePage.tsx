@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { QueueIcon, ServerIcon, SubscriptionIcon, TopicIcon } from '../components/icons'
 import { objectPath } from '../lib/categories'
+import { filterTopology, objectCount } from '../lib/filterTopology'
 import { inferChannelTargetQm, type MqNodeKind } from '../lib/graphModel'
 import { useTopology } from '../state/TopologyContext'
 import type { Channel, Queue, Subscription, Topic } from '../types/mq'
@@ -164,11 +165,17 @@ interface Group {
 export function ExplorePage() {
   const { topology } = useTopology()
   const navigate = useNavigate()
+  const [query, setQuery] = useState('')
 
   const knownQmNames = useMemo(
     () => new Set(topology.queueManagers.map((qm) => qm.name)),
     [topology.queueManagers],
   )
+
+  const filtered = useMemo(() => filterTopology(topology, { query }), [topology, query])
+  const searching = query.trim() !== ''
+  const shown = objectCount(filtered)
+  const total = objectCount(topology)
 
   if (topology.queueManagers.length === 0) {
     return (
@@ -180,40 +187,68 @@ export function ExplorePage() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="border-b border-slate-200 bg-white px-6 py-4">
-        <h2 className="text-lg font-semibold text-slate-800">Explore</h2>
-        <p className="text-xs text-slate-500">Browse queue managers, their objects, and properties.</p>
+      <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white px-6 py-4">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-800">Explore</h2>
+          <p className="text-xs text-slate-500">
+            {searching ? `${shown} of ${total} objects` : 'Browse queue managers, their objects, and properties.'}
+          </p>
+        </div>
+        <div className="ml-auto relative">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search name or any field…"
+            className="w-72 rounded-md border border-slate-300 px-3 py-2 pr-7 text-sm outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-4">
-        {topology.queueManagers.map((qm) => {
+        {filtered.queueManagers.length === 0 && (
+          <div className="py-16 text-center text-sm text-slate-400">No objects match your search.</div>
+        )}
+        {/* Keyed by query so rows remount and pick up the auto-expanded state while searching. */}
+        <div key={query}>
+          {filtered.queueManagers.map((qm) => {
           const groups: Group[] = [
             {
               kind: 'queue',
               label: 'Queues',
               icon: <QueueIcon className="h-4 w-4" />,
-              items: topology.queues.filter((q) => q.queueManager === qm.name),
+              items: filtered.queues.filter((q) => q.queueManager === qm.name),
               subtypeOf: (o) => (o as Queue).queueType,
             },
             {
               kind: 'topic',
               label: 'Topics',
               icon: <TopicIcon className="h-4 w-4" />,
-              items: topology.topics.filter((t) => t.queueManager === qm.name),
+              items: filtered.topics.filter((t) => t.queueManager === qm.name),
               subtypeOf: (o) => (o as Topic).topicString,
             },
             {
               kind: 'subscription',
               label: 'Subscriptions',
               icon: <SubscriptionIcon className="h-4 w-4" />,
-              items: topology.subscriptions.filter((s) => s.queueManager === qm.name),
+              items: filtered.subscriptions.filter((s) => s.queueManager === qm.name),
               subtypeOf: (o) => (o as Subscription).subscriptionType,
             },
             {
               kind: 'queue', // channels reuse a neutral icon; handled below
               label: 'Channels',
               icon: <ServerIcon className="h-4 w-4" />,
-              items: (topology.channels ?? []).filter((c) => c.queueManager === qm.name),
+              items: (filtered.channels ?? []).filter((c) => c.queueManager === qm.name),
               subtypeOf: (o) => (o as Channel).channelType,
             },
           ]
@@ -228,7 +263,9 @@ export function ExplorePage() {
               badge={<TypeBadge text="Queue Manager" />}
               onLabelClick={() => navigate(objectPath('queue-manager', qm.name, qm.name))}
             >
-              {groups.map((group) => {
+              {groups
+                .filter((group) => !searching || group.items.length > 0)
+                .map((group) => {
                 // Channels are their own object kind for routing even though the group reuses styling.
                 const isChannel = group.label === 'Channels'
                 const routeSlug = isChannel ? 'channel' : KIND_SLUG[group.kind]
@@ -241,6 +278,7 @@ export function ExplorePage() {
                     label={group.label}
                     badge={<CountBadge n={group.items.length} />}
                     hasChildren={group.items.length > 0}
+                    defaultOpen={searching && group.items.length > 0}
                   >
                     {group.items.map((item) => {
                       const subtype = group.subtypeOf(item)
@@ -277,7 +315,8 @@ export function ExplorePage() {
               })}
             </TreeRow>
           )
-        })}
+          })}
+        </div>
       </div>
     </div>
   )

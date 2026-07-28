@@ -15,8 +15,12 @@ Built with **Vite + React + TypeScript**, styled with **Tailwind CSS**, laid out
 - **Persists to local storage** — imported data is saved in the browser and reloaded on next visit.
   Re-importing a queue manager of the same name prompts to replace it (its whole object tree is
   rebuilt).
-- **Explore tree** — a collapsible tree of queue managers → object groups → objects → properties,
-  with a jump-to-flow link on every object.
+- **Explore tree** — a collapsible, **searchable** tree of queue managers → object groups → objects →
+  properties, with a jump-to-flow link on every object.
+- **Filter the overview** — a search box filters the graph by name or **any field/property** (every
+  whitespace-separated term must match), plus per-type toggles (queues / topics / subscriptions /
+  channels) to tame large maps. The view re-fits to the matches, and a counter shows how many objects
+  are visible.
 - **Side menu** listing each object category (Queue Managers, Queues, Topics, Subscriptions,
   Channels) with live counts.
 - **Searchable list pages** — click a category to browse its objects and filter them as you type.
@@ -172,6 +176,7 @@ src/lib/graphModel.ts                  Data model → normalized objects + relat
 src/lib/buildFullGraph.ts              Grouped overview layout (dagre per queue manager)
 src/lib/buildFocusedGraph.ts           Neighbourhood layout for a single object's flow
 src/lib/categories.ts                  Object categories + route helpers
+src/lib/filterTopology.ts              Full-text + by-kind topology filtering (Overview & Explore)
 src/state/TopologyContext.tsx          Shared topology state, local-storage persistence, import
 src/components/ImportModal.tsx         CSV import wizard
 src/components/                        Layout, SideMenu, TopBar, FlowCanvas, Sidebar, nodes, …
