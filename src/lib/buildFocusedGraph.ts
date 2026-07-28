@@ -64,9 +64,10 @@ export function buildFocusedGraph(topology: MqTopology, target: FocusTarget, dep
       (c) => c.queueManager === target.queueManager && c.name === target.name,
     )
     if (!channel) return { nodes: [], edges: [], found: false }
+    // The channel's edge (with its inferred partner queue manager) is derived once in deriveGraph.
     const link = links.find((l) => l.relationship === 'channel' && l.label === channel.name)
     const srcObj = byId.get(qmNodeId(channel.queueManager))
-    const tgtObj = channel.targetQueueManager ? byId.get(qmNodeId(channel.targetQueueManager)) : undefined
+    const tgtObj = link ? byId.get(link.target) : undefined
     const nodes: MqFlowNode[] = []
     if (srcObj) nodes.push(toFlowNode(srcObj, true))
     if (tgtObj) nodes.push(toFlowNode(tgtObj, false))

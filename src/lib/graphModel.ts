@@ -1,6 +1,6 @@
 import { MarkerType } from '@xyflow/react'
 import type { Edge, Node } from '@xyflow/react'
-import type { MqTopology } from '../types/mq'
+import type { Channel, MqTopology } from '../types/mq'
 
 export type MqNodeKind = 'queueManager' | 'queue' | 'topic' | 'subscription'
 
@@ -126,6 +126,57 @@ export function mkFlowEdge(link: MqLink): MqFlowEdge {
 
 function linkId(relationship: MqRelationship, source: string, target: string): string {
   return `${relationship}::${source}->${target}`
+}
+
+/** Channel types that represent an outbound connection worth drawing an edge for. */
+function isOutboundChannel(channel: Channel): boolean {
+  const t = (channel.channelType ?? '').trim().toLowerCase()
+  if (!t) return false
+  if (t.includes('connection')) return false // server-connection / client-connection are local endpoints
+  if (t.includes('receiver') || t.includes('requester')) return false
+  return t.includes('sender') || t.includes('server')
+}
+
+/**
+ * MQ Explorer channel exports don't name the partner queue manager directly, so infer it from
+ * (in priority order): an explicit target field, the `A.TO.B` naming convention, a transmission
+ * queue named after the target queue manager, or any known queue-manager name appearing as a
+ * dotted segment of the channel name. Only queue managers present in the topology are matched.
+ */
+export function inferChannelTargetQm(channel: Channel, knownQmNames: Set<string>): string | undefined {
+  const byLower = new Map<string, string>()
+  knownQmNames.forEach((n) => byLower.set(n.toLowerCase(), n))
+  const match = (candidate: string | undefined): string | undefined => {
+    if (!candidate) return undefined
+    const hit = byLower.get(candidate.trim().toLowerCase())
+    return hit && hit !== channel.queueManager ? hit : undefined
+  }
+
+  // 1. Explicit target (e.g. from the JSON model).
+  if (channel.targetQueueManager) {
+    const explicit = match(channel.targetQueueManager)
+    if (explicit) return explicit
+  }
+
+  // 2. "SOURCE.TO.TARGET" naming convention.
+  const toIdx = channel.name.toUpperCase().lastIndexOf('.TO.')
+  if (toIdx >= 0) {
+    const fromName = match(channel.name.slice(toIdx + 4))
+    if (fromName) return fromName
+  }
+
+  // 3. Transmission queue conventionally named after the target queue manager.
+  const xmit = channel.attributes?.['Transmission queue']
+  const fromXmit = match(typeof xmit === 'string' ? xmit : undefined)
+  if (fromXmit) return fromXmit
+
+  // 4. Any known queue-manager name appearing as a dotted segment of the channel name.
+  for (const segment of channel.name.split('.')) {
+    const fromSegment = match(segment)
+    if (fromSegment) return fromSegment
+  }
+
+  return undefined
 }
 
 /**
@@ -310,10 +361,26 @@ export function deriveGraph(topology: MqTopology): DerivedGraph {
     }
   }
 
-  // Sender/receiver channels between queue managers.
+  // Channels between queue managers. The partner queue manager is inferred (see
+  // inferChannelTargetQm); only outbound channel types (or an explicit target) draw an edge, so a
+  // sender/receiver pair doesn't produce two overlapping edges.
   for (const c of topology.channels ?? []) {
-    if (!c.targetQueueManager || !knownQmNames.has(c.targetQueueManager) || !knownQmNames.has(c.queueManager)) continue
-    addLink(qmNodeId(c.queueManager), qmNodeId(c.targetQueueManager), 'channel', c.name)
+    if (!knownQmNames.has(c.queueManager)) continue
+    const explicit = !!c.targetQueueManager && knownQmNames.has(c.targetQueueManager)
+    if (!explicit && !isOutboundChannel(c)) continue
+    const target = inferChannelTargetQm(c, knownQmNames)
+    if (!target) continue
+    const source = qmNodeId(c.queueManager)
+    const targetId = qmNodeId(target)
+    // Channel names are unique within a QM; include the name so multiple channels between the same
+    // pair of queue managers get distinct edge ids.
+    links.push({
+      id: `channel::${source}->${targetId}::${c.name}`,
+      source,
+      target: targetId,
+      relationship: 'channel',
+      label: c.name,
+    })
   }
 
   return { objects, byId, links }

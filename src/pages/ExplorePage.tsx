@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { QueueIcon, ServerIcon, SubscriptionIcon, TopicIcon } from '../components/icons'
 import { objectPath } from '../lib/categories'
-import type { MqNodeKind } from '../lib/graphModel'
+import { inferChannelTargetQm, type MqNodeKind } from '../lib/graphModel'
 import { useTopology } from '../state/TopologyContext'
 import type { Channel, Queue, Subscription, Topic } from '../types/mq'
 
@@ -165,6 +165,11 @@ export function ExplorePage() {
   const { topology } = useTopology()
   const navigate = useNavigate()
 
+  const knownQmNames = useMemo(
+    () => new Set(topology.queueManagers.map((qm) => qm.name)),
+    [topology.queueManagers],
+  )
+
   if (topology.queueManagers.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-8 text-center text-sm text-slate-500">
@@ -239,6 +244,11 @@ export function ExplorePage() {
                   >
                     {group.items.map((item) => {
                       const subtype = group.subtypeOf(item)
+                      const entries = propertiesFor(propKind, item)
+                      if (isChannel) {
+                        const target = inferChannelTargetQm(item as Channel, knownQmNames)
+                        if (target) entries.unshift(['Connects to (inferred)', target])
+                      }
                       return (
                         <TreeRow
                           key={`${group.label}:${item.name}`}
@@ -258,7 +268,7 @@ export function ExplorePage() {
                             </button>
                           }
                         >
-                          <Properties level={3} entries={propertiesFor(propKind, item)} />
+                          <Properties level={3} entries={entries} />
                         </TreeRow>
                       )
                     })}

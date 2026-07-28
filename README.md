@@ -94,6 +94,17 @@ remote queues from `Remote queue` / `Remote queue manager`, subscriptions from `
 Every non-empty column is also kept verbatim as a property, visible on the Explore tree and the details
 panel. If your MQ Explorer version uses different headers, adjust the mapping there.
 
+### Channel connectivity
+
+MQ Explorer's channel export doesn't name the partner queue manager, so it's inferred (see
+`inferChannelTargetQm` in [`src/lib/graphModel.ts`](src/lib/graphModel.ts)) from, in order: an explicit
+target, the `SOURCE.TO.TARGET` naming convention, a transmission queue named after the target queue
+manager, or any known queue-manager name appearing as a dotted segment of the channel name. Only queue
+managers you've actually imported are matched, and only outbound channel types (sender/server/
+cluster-sender) draw an edge — so a sender/receiver pair between two queue managers produces one edge,
+not two. The inferred partner is shown as a “Connects to (inferred)” property in the Explore tree. Import
+both ends of a link (each queue manager) to see the channel edge between them.
+
 Imported data lives entirely in your browser (local storage under the key `mq-flow:topology`) — nothing
 is uploaded. Clearing site data resets the app to the bundled sample.
 
